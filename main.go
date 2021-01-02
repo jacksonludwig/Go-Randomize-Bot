@@ -1,16 +1,17 @@
 package main
 
 import (
-    "os"
-    "os/signal"
-    "syscall"
+	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 
-    "github.com/bwmarrin/discordgo"
+	"github.com/bwmarrin/discordgo"
 
-    "flag"
-    "fmt"
-    "strings"
-    "errors"
+	"errors"
+	"flag"
+	"fmt"
+	"strings"
 )
 
 var Token string
@@ -63,14 +64,45 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
     // if the command's format is correct, continue
     if (strings.HasPrefix(mess.Content, Command + " ") || mess.Content == Command) {
         words := strings.Split(mess.Content, " ")
+        var people []discordgo.User
+        var err error
         if len(words) > 1 {
-            getPeople(sess, mess, words[1:]...)
+            people,err = getPeople(sess, mess, words[1:]...)
         } else {
-            getPeople(sess, mess)
+            people,err = getPeople(sess, mess)
+        }
+        if err != nil {
+            sendHelpMessage(sess, mess)
+        } else {
+            sendTeams(sess, mess, people)
         }
     } else if(strings.Contains(mess.Content, Command)) {
         sendHelpMessage(sess, mess)
     }
+}
+
+func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []discordgo.User) {
+    users := getUsernames(names)
+    var team1 []string
+    var team2 []string
+    for _,user := range users {
+        if rand.Intn(2) == 0 {
+            team1 = append(team1, user)
+        } else {
+            team2 = append(team2, user)
+        }
+    }
+    msg := fmt.Sprintf("Team 1: %s\nTeam2: %s", team1, team2)
+    sess.ChannelMessageSend(mess.ChannelID, msg)
+}
+
+// get usernames from User structs
+func getUsernames(users []discordgo.User) []string {
+    var names []string
+    for _,user := range users {
+        names = append(names, user.Username)
+    }
+    return names
 }
 
 func sendHelpMessage(sess *discordgo.Session, mess *discordgo.MessageCreate) {
@@ -87,10 +119,15 @@ func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNa
     var channelIDs []string
 
     if len(channelNames) > 0 {
+        var count int
         for _,channel := range channels {
             if contains(channelNames, channel.Name) {
                 channelIDs = append(channelIDs, channel.ID)
+                count++
             }
+        }
+        if count < 1 {
+            return nil, errors.New("incorrect or non-existant channel name")
         }
     } else {
         channelIDs = Map(channels, func(v *discordgo.Channel) string {
@@ -108,7 +145,7 @@ func createUserList(guild *discordgo.Guild, members []*discordgo.Member, channel
     for _,member := range members {
         voiceState,err := findUserVoiceState(guild, member.User.ID)
         if err != nil {
-            return nil, err
+            continue
         }
         userChannel := voiceState.ChannelID
 
@@ -124,7 +161,6 @@ func createUserList(guild *discordgo.Guild, members []*discordgo.Member, channel
 func getGuild(sess *discordgo.Session, mess *discordgo.MessageCreate) (*discordgo.Guild, error) {
     guild, err := sess.State.Guild(mess.GuildID)
     if err != nil {
-        fmt.Println(err)
         return nil, errors.New("failed to retrieve guild data")
     }
     return guild, nil

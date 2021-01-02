@@ -87,9 +87,17 @@ func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []d
     var team2 []string
     for _,user := range users {
         if rand.Intn(2) == 0 {
-            team1 = append(team1, user)
+            if len(team1) < len(users) / 2 {
+                team1 = append(team1, user)
+            } else {
+                team2 = append(team2, user)
+            }
         } else {
-            team2 = append(team2, user)
+            if len(team2) < len(users) / 2 {
+                team2 = append(team2, user)
+            } else {
+                team1 = append(team1, user)
+            }
         }
     }
     msg := fmt.Sprintf("Team 1: %s\nTeam2: %s", team1, team2)

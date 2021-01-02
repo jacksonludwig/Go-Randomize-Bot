@@ -1,17 +1,19 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
+    "os"
+    "os/signal"
+    "syscall"
 
-	"github.com/bwmarrin/discordgo"
+    "github.com/bwmarrin/discordgo"
 
-	"flag"
-	"fmt"
+    "flag"
+    "fmt"
+    "strings"
 )
 
 var Token string
+const Command string = "!randomize"
 
 func init() {
     flag.StringVar(&Token, "token", "", "Bot Token")
@@ -57,7 +59,36 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
     if mess.Author.ID == sess.State.User.ID {
         return
     }
-    fmt.Printf("Message received: %s\n", mess.Content)
+    // if the command's format is correct, continue
+    if (strings.HasPrefix(mess.Content, Command + " ") || mess.Content == Command) {
+        words := strings.Split(mess.Content, " ")
+        if len(words) > 1 {
+            getPeople(sess, mess, words[1:]...)
+        } else {
+            getPeople(sess, mess)
+        }
+    } else if(strings.Contains(mess.Content, Command)) {
+        sendHelpMessage(sess, mess)
+    }
+}
+
+func sendHelpMessage(sess *discordgo.Session, mess *discordgo.MessageCreate) {
+    help := "Bot use: \n!randomize <channel 1> <channel 2> <...>\n!randomize alone uses all channels"
+    sess.ChannelMessageSend(mess.ChannelID, help)
+}
+
+// Get list of people in channel(s). No given channel names mean all of them.
+func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNames ...string) {
+    // get correct guild from message
+    guild := mess.GuildID
+    members := sess.RequestGuildMembers(guild, "", 0, true)
+    for _, member := range members {
+        fmt.Println(member.User)
+    }
+    // get all channels from guild
+    // channels, _ := sess.GuildChannels(guild)
+    // if len(channelNames) == 0 {
+    // }
 }
 
 // attach handlers

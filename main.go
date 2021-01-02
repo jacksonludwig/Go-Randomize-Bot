@@ -65,10 +65,8 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
         words := strings.Split(mess.Content, " ")
         if len(words) > 1 {
             getPeople(sess, mess, words[1:]...)
-            fmt.Println("command was: " + mess.Content)
         } else {
             getPeople(sess, mess)
-            fmt.Println("command was: " + mess.Content)
         }
     } else if(strings.Contains(mess.Content, Command)) {
         sendHelpMessage(sess, mess)
@@ -80,22 +78,46 @@ func sendHelpMessage(sess *discordgo.Session, mess *discordgo.MessageCreate) {
     sess.ChannelMessageSend(mess.ChannelID, help)
 }
 
-// TODO
 // Get list of people in given channel(s). No given channel names mean all of them.
-func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNames ...string) ([]*discordgo.User, error) {
+func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNames ...string) ([]discordgo.User, error) {
     guild,_ := getGuild(sess, mess)
     members := guild.Members
-    if len(channelNames) > 0 {
-        channels := Map(guild.Channels, func(v *discordgo.Channel) string {
-            return v.Name
-        })
-        for _,member := range members {
-            voiceState,_ := findUserVoiceState(guild, member.User.ID)
-            userChannel := voiceState.ChannelID
-        }
+    channels := guild.Channels
 
+    var channelIDs []string
+
+    if len(channelNames) > 0 {
+        for _,channel := range channels {
+            if contains(channelNames, channel.Name) {
+                channelIDs = append(channelIDs, channel.ID)
+            }
+        }
+    } else {
+        channelIDs = Map(channels, func(v *discordgo.Channel) string {
+            return v.ID
+        })
     }
-    return nil, nil
+
+    return createUserList(guild, members, channelIDs)
+}
+
+// Helper for getPeople.
+// Checks users in all voice channels against the given list of channels of interest.
+func createUserList(guild *discordgo.Guild, members []*discordgo.Member, channelIDs []string) ([]discordgo.User, error) {
+    var users []discordgo.User
+    for _,member := range members {
+        voiceState,err := findUserVoiceState(guild, member.User.ID)
+        if err != nil {
+            return nil, err
+        }
+        userChannel := voiceState.ChannelID
+
+        if contains(channelIDs, userChannel) {
+            users = append(users, *member.User)
+        }
+    }
+
+    return users,nil
 }
 
 // gets guild using message
@@ -124,15 +146,14 @@ func engageHandlers(bot *discordgo.Session) {
     bot.AddHandler(messageCreate)
 }
 
-// helper filter function
-func Filter(vs []string, f func(string) bool) []string {
-    vsf := make([]string, 0)
-    for _, v := range vs {
-        if f(v) {
-            vsf = append(vsf, v)
+// helper contains function
+func contains(s []string, e string) bool {
+    for _, a := range s {
+        if a == e {
+            return true
         }
     }
-    return vsf
+    return false
 }
 
 // helper map function

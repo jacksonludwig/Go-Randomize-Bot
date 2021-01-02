@@ -10,6 +10,7 @@ import (
     "flag"
     "fmt"
     "strings"
+    "errors"
 )
 
 var Token string
@@ -64,8 +65,10 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
         words := strings.Split(mess.Content, " ")
         if len(words) > 1 {
             getPeople(sess, mess, words[1:]...)
+            fmt.Println("command was: " + mess.Content)
         } else {
             getPeople(sess, mess)
+            fmt.Println("command was: " + mess.Content)
         }
     } else if(strings.Contains(mess.Content, Command)) {
         sendHelpMessage(sess, mess)
@@ -73,25 +76,70 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
 }
 
 func sendHelpMessage(sess *discordgo.Session, mess *discordgo.MessageCreate) {
-    help := "Bot use: \n!randomize <channel 1> <channel 2> <...>\n!randomize alone uses all channels"
+    help := "``Bot use: \n!randomize <channel 1> <channel 2> <...>\n!randomize alone uses all channels``"
     sess.ChannelMessageSend(mess.ChannelID, help)
 }
 
-// Get list of people in channel(s). No given channel names mean all of them.
-func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNames ...string) {
-    // get correct guild from message
-    guild := mess.GuildID
-    members := sess.RequestGuildMembers(guild, "", 0, true)
-    for _, member := range members {
-        fmt.Println(member.User)
+// TODO
+// Get list of people in given channel(s). No given channel names mean all of them.
+func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNames ...string) ([]*discordgo.User, error) {
+    guild,_ := getGuild(sess, mess)
+    members := guild.Members
+    if len(channelNames) > 0 {
+        channels := Map(guild.Channels, func(v *discordgo.Channel) string {
+            return v.Name
+        })
+        for _,member := range members {
+            voiceState,_ := findUserVoiceState(guild, member.User.ID)
+            userChannel := voiceState.ChannelID
+        }
+
     }
-    // get all channels from guild
-    // channels, _ := sess.GuildChannels(guild)
-    // if len(channelNames) == 0 {
-    // }
+    return nil, nil
+}
+
+// gets guild using message
+func getGuild(sess *discordgo.Session, mess *discordgo.MessageCreate) (*discordgo.Guild, error) {
+    guild, err := sess.State.Guild(mess.GuildID)
+    if err != nil {
+        fmt.Println(err)
+        return nil, errors.New("failed to retrieve guild data")
+    }
+    return guild, nil
+}
+
+// find voice channel user is currently in
+func findUserVoiceState(guild *discordgo.Guild, userid string) (*discordgo.VoiceState, error) {
+    for _, person := range guild.VoiceStates {
+        if person.UserID == userid {
+            return person, nil
+        }
+    }
+
+    return nil, errors.New("Could not find user's voice state")
 }
 
 // attach handlers
 func engageHandlers(bot *discordgo.Session) {
     bot.AddHandler(messageCreate)
+}
+
+// helper filter function
+func Filter(vs []string, f func(string) bool) []string {
+    vsf := make([]string, 0)
+    for _, v := range vs {
+        if f(v) {
+            vsf = append(vsf, v)
+        }
+    }
+    return vsf
+}
+
+// helper map function
+func Map(vs []*discordgo.Channel, f func(*discordgo.Channel) string) []string {
+    vsm := make([]string, len(vs))
+    for i, v := range vs {
+        vsm[i] = f(v)
+    }
+    return vsm
 }

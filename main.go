@@ -72,7 +72,7 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
             people,err = getPeople(sess, mess)
         }
         if err != nil {
-            sendHelpMessage(sess, mess)
+            sendErrorMessage(sess, mess, err)
         } else {
             sendTeams(sess, mess, people)
         }
@@ -116,6 +116,10 @@ func getUsernames(users []discordgo.User) []string {
 func sendHelpMessage(sess *discordgo.Session, mess *discordgo.MessageCreate) {
     help := "``Bot use: \n!randomize <channel 1> <channel 2> <...>\n!randomize alone uses all channels``"
     sess.ChannelMessageSend(mess.ChannelID, help)
+}
+
+func sendErrorMessage(sess *discordgo.Session, mess *discordgo.MessageCreate, err error) {
+    sess.ChannelMessageSend(mess.ChannelID, fmt.Sprint("bot encountered an error,", err))
 }
 
 // Get list of people in given channel(s). No given channel names mean all of them.

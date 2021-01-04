@@ -1,17 +1,18 @@
 package main
 
 import (
-    "math/rand"
-    "os"
-    "os/signal"
-    "syscall"
+	"math"
+	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 
-    "github.com/bwmarrin/discordgo"
+	"github.com/bwmarrin/discordgo"
 
-    "errors"
-    "flag"
-    "fmt"
-    "strings"
+	"errors"
+	"flag"
+	"fmt"
+	"strings"
 )
 
 var Token string
@@ -96,7 +97,7 @@ func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []d
     for i := 0; i < len(teams); i++ {
         msg = msg + fmt.Sprintf("Team %d: ", i)
         for j := 0; j < len(teams[i]); j++ {
-            msg = msg + teams[i][j]
+            msg = msg + teams[i][j] + " | "
         }
         msg += "\n"
     }
@@ -128,7 +129,7 @@ func decideTeams(users []string) ([][]string, error) {
         return nil, errors.New("cannot makes teams without any users")
     }
 
-    numberOfPlayersPerTeam := len(users) / 2
+    numberOfPlayersPerTeam := int(math.Ceil(float64(len(users)) / float64(numberOfTeams)))
     var j int
     for i := 0; i < len(users); i += numberOfPlayersPerTeam {
         j += numberOfPlayersPerTeam

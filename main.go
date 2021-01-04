@@ -63,7 +63,7 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
         return
     }
     // if the command's format is correct, continue
-    if (strings.HasPrefix(mess.Content, Command + " ") || mess.Content == Command) {
+    if strings.HasPrefix(mess.Content, Command + " ") || mess.Content == Command {
         words := strings.Split(mess.Content, " ")
         var people []discordgo.User
         var err error

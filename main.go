@@ -75,16 +75,22 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
         if err != nil {
             sendErrorMessage(sess, mess, err)
         } else {
-            sendTeams(sess, mess, people)
+            err = sendTeams(sess, mess, people)
+            if err != nil {
+                sendErrorMessage(sess, mess, err)
+            }
         }
     } else if(strings.Contains(mess.Content, Command)) {
         sendHelpMessage(sess, mess)
     }
 }
 
-func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []discordgo.User) {
+func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []discordgo.User) error {
     users := getUsernames(names)
-    teams := decideTeams(users)
+    teams,err := decideTeams(users)
+    if err != nil {
+        return err
+    }
 
     var msg string
     for i := 0; i < len(teams); i++ {
@@ -96,6 +102,7 @@ func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []d
     }
 
     sess.ChannelMessageSend(mess.ChannelID, msg)
+    return nil
 }
 
 // Fisher-Yates shuffle to randomize list of users
@@ -107,18 +114,18 @@ func shuffle(names []string) {
 }
 
 // Evenly split teams using the number of teams given
-func decideTeams(users []string) [][]string {
+func decideTeams(users []string) ([][]string, error) {
     users = unique(users)
     shuffle(users)
 
     var teams [][]string
 
     // if one user, return just them
-    // if none, return empty
-    if len(users) < 2 {
-        return append(teams, []string{users[0]})
+    // if none, return error
+    if len(users) == 1 {
+        return append(teams, []string{users[0]}), nil
     } else if len(users) == 0 {
-        return append(teams, []string{""})
+        return nil, errors.New("cannot makes teams without any users")
     }
 
     numberOfPlayersPerTeam := len(users) / 2
@@ -131,7 +138,7 @@ func decideTeams(users []string) [][]string {
         teams = append(teams, users[i:j])
     }
 
-    return teams
+    return teams, nil
 }
 
 // get usernames from User structs
@@ -149,7 +156,7 @@ func sendHelpMessage(sess *discordgo.Session, mess *discordgo.MessageCreate) {
 }
 
 func sendErrorMessage(sess *discordgo.Session, mess *discordgo.MessageCreate, err error) {
-    sess.ChannelMessageSend(mess.ChannelID, fmt.Sprint("bot encountered an error,", err))
+    sess.ChannelMessageSend(mess.ChannelID, fmt.Sprint("bot encountered an error: ", err))
 }
 
 // Get list of people in given channel(s). No given channel names mean all of them.

@@ -113,6 +113,14 @@ func decideTeams(users []string) [][]string {
 
     var teams [][]string
 
+    // if one user, return just them
+    // if none, return empty
+    if len(users) < 2 {
+        return append(teams, []string{users[0]})
+    } else if len(users) == 0 {
+        return append(teams, []string{""})
+    }
+
     numberOfPlayersPerTeam := len(users) / 2
     var j int
     for i := 0; i < len(users); i += numberOfPlayersPerTeam {

@@ -16,6 +16,7 @@ import (
 
 var Token string
 const Command string = "!randomize"
+const numberOfTeams int = 2
 
 func init() {
     flag.StringVar(&Token, "token", "", "Bot Token")
@@ -83,25 +84,46 @@ func messageCreate(sess *discordgo.Session, mess *discordgo.MessageCreate) {
 
 func sendTeams(sess *discordgo.Session, mess *discordgo.MessageCreate, names []discordgo.User) {
     users := getUsernames(names)
-    var team1 []string
-    var team2 []string
-    for _,user := range users {
-        if rand.Intn(2) == 0 {
-            if len(team1) < len(users) / 2 {
-                team1 = append(team1, user)
-            } else {
-                team2 = append(team2, user)
-            }
-        } else {
-            if len(team2) < len(users) / 2 {
-                team2 = append(team2, user)
-            } else {
-                team1 = append(team1, user)
-            }
+    teams := decideTeams(users)
+
+    var msg string
+    for i := 0; i < len(teams); i++ {
+        msg = msg + fmt.Sprintf("Team %d: ", i)
+        for j := 0; j < len(teams[i]); j++ {
+            msg = msg + teams[i][j]
         }
+        msg += "\n"
     }
-    msg := fmt.Sprintf("Team 1: %s\nTeam2: %s", team1, team2)
+
     sess.ChannelMessageSend(mess.ChannelID, msg)
+}
+
+// Fisher-Yates shuffle to randomize list of users
+func shuffle(names []string) {
+    for i := range names {
+        j := rand.Intn(i + 1)
+        names[i], names[j] = names[j], names[i]
+    }
+}
+
+// Evenly split teams using the number of teams given
+func decideTeams(users []string) [][]string {
+    users = unique(users)
+    shuffle(users)
+
+    var teams [][]string
+
+    numberOfPlayersPerTeam := len(users) / 2
+    var j int
+    for i := 0; i < len(users); i += numberOfPlayersPerTeam {
+        j += numberOfPlayersPerTeam
+        if j > len(users) {
+            j = len(users)
+        }
+        teams = append(teams, users[i:j])
+    }
+
+    return teams
 }
 
 // get usernames from User structs
@@ -123,6 +145,7 @@ func sendErrorMessage(sess *discordgo.Session, mess *discordgo.MessageCreate, er
 }
 
 // Get list of people in given channel(s). No given channel names mean all of them.
+// NOTE: guild.Members is bugged and returns duplicates.
 func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNames ...string) ([]discordgo.User, error) {
     guild,_ := getGuild(sess, mess)
     members := guild.Members
@@ -148,6 +171,19 @@ func getPeople(sess *discordgo.Session, mess *discordgo.MessageCreate, channelNa
     }
 
     return createUserList(guild, members, channelIDs)
+}
+
+// filter out unique users
+func unique(users []string) []string {
+    keys := make(map[string]bool)
+    list := []string{}
+    for _, entry := range users {
+        if _, value := keys[entry]; !value {
+            keys[entry] = true
+            list = append(list, entry)
+        }
+    }
+    return list
 }
 
 // Helper for getPeople.

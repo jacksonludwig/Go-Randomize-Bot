@@ -1,18 +1,18 @@
 package main
 
 import (
-	"math"
-	"math/rand"
-	"os"
-	"os/signal"
-	"syscall"
+    "math"
+    "math/rand"
+    "os"
+    "os/signal"
+    "syscall"
 
-	"github.com/bwmarrin/discordgo"
+    "github.com/bwmarrin/discordgo"
 
-	"errors"
-	"flag"
-	"fmt"
-	"strings"
+    "errors"
+    "flag"
+    "fmt"
+    "strings"
 )
 
 var Token string

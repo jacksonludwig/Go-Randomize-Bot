@@ -1,18 +1,18 @@
 package main
 
 import (
-    "math"
-    "math/rand"
-    "os"
-    "os/signal"
-    "syscall"
+	"math"
+	"math/rand"
+	"os"
+	"os/signal"
+	"syscall"
 
-    "github.com/bwmarrin/discordgo"
+	"github.com/bwmarrin/discordgo"
 
-    "errors"
-    "flag"
-    "fmt"
-    "strings"
+	"errors"
+	"flag"
+	"fmt"
+	"strings"
 )
 
 var Token string
@@ -126,7 +126,7 @@ func decideTeams(users []string) ([][]string, error) {
     if len(users) == 1 {
         return append(teams, []string{users[0]}), nil
     } else if len(users) == 0 {
-        return nil, errors.New("cannot makes teams without any users")
+        return nil, errors.New("cannot make teams without any users")
     }
 
     numberOfPlayersPerTeam := int(math.Ceil(float64(len(users)) / float64(numberOfTeams)))
